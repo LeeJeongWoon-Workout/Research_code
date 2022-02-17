@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import tqdm
 import random
 from IPython.display import clear_output
 from numpy import dot
@@ -224,15 +223,15 @@ class DDPGAgent_epi_mo:
         done_mask=torch.FloatTensor(samples['done']).reshape(-1,1).to(device)
 
 
-        #idx=np.random.choice(self.batch_size,1,replace=False)
-        #state[idx]=torch.FloatTensor(lastest_transition[0])
-        #action[idx]=torch.FloatTensor(lastest_transition[1])
-        #reward[idx]=torch.FloatTensor([lastest_transition[2]])
-        #next_state[idx]=torch.FloatTensor(lastest_transition[3])
+        idx=np.random.choice(self.batch_size,1,replace=False)
+        state[idx]=torch.FloatTensor(lastest_transition[0]).to(device)
+        action[idx]=torch.FloatTensor(lastest_transition[1]).to(device)
+        reward[idx]=torch.FloatTensor([lastest_transition[2]]).to(device)
+        next_state[idx]=torch.FloatTensor(lastest_transition[3]).to(device)
 
-        #lastest_transition[-1]= 0. if lastest_transition[-1] else 1.
+        lastest_transition[-1]= 0. if lastest_transition[-1] else 1.
 
-        #done_mask[idx]=torch.FloatTensor([lastest_transition[-1]])
+        done_mask[idx]=torch.FloatTensor([lastest_transition[-1]]).to(device)
 
 
 
@@ -266,7 +265,7 @@ class DDPGAgent_epi_mo:
         episode=list()
         result_score=0
 
-        for frame_idx in tqdm.trange(num_frames):
+        for frame_idx in range(num_frames):
 
             done=False
             state=self.env.reset()
@@ -297,6 +296,7 @@ class DDPGAgent_epi_mo:
                 self.soft_update(self.q,self.q_target)
 
         self.env.close()
+        reward_lst=np.array(reward_lst,dtype=np.float32)
         return reward_lst
 def seed_torch(seed):
     torch.manual_seed(seed)
