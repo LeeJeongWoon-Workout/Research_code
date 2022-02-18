@@ -1,1 +1,5 @@
 
+DCFNet (DCFNET: DISCRIMINANT CORRELATION FILTERS NETWORK FOR VISUAL TRACKING
+)
+paper :https://arxiv.org/pdf/1704.04057.pdf
+code source: https://github.com/foolwood/DCFNet_pytorch 
