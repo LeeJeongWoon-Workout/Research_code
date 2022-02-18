@@ -14,7 +14,6 @@ from IPython.display import clear_output
 from numpy import dot
 from numpy.linalg import norm
 
-
 class ReplayBuffer:
 
     def __init__(self,obs_dim:int,size:int,batch_size:int):
@@ -28,6 +27,7 @@ class ReplayBuffer:
 
         self.max_size,self.batch_size=size,batch_size
         self.ptr,self.size=0,0
+
 
     def store(self,obs:np.ndarray,act:np.ndarray,rew:float,next_obs:np.ndarray,done:bool,epi:float):
 
@@ -51,6 +51,7 @@ class ReplayBuffer:
 
         return self.size
 
+
     def extract_sim_state(self,idx,lastest_sample) -> np.ndarray:
 
         states=self.obs_buf[idx]
@@ -64,23 +65,21 @@ class ReplayBuffer:
 
         sim_array=np.array(sim_array,dtype=np.float32)
         arg_index=np.argsort(sim_array)
-        idx=np.where(arg_index>=self.batch_size-10)
+        idx=np.where(arg_index>=self.batch_size-4)
 
         return idx
 
 
     def sample_batch(self,lastest_sample) -> Dict[str,np.ndarray]:
+
         assert len(self)>=2*self.batch_size
 
-
-
-        idx0=np.random.choice(self.size,self.batch_size,replace=False)
-
+        idx0=np.random.choice(self.size,self.batch_size,replace=True)
 
         idx0=self.extract_sim_state(idx0,lastest_sample)
 
-        idx1=np.random.choice(self.size,self.batch_size,replace=False)
-        idx2=np.random.choice(self.size,self.batch_size,replace=False)
+        idx1=np.random.choice(self.size,self.batch_size,replace=True)
+        idx2=np.random.choice(self.size,self.batch_size,replace=True)
 
         obs1=self.obs_buf[idx1]
         acts1=self.acts_buf[idx1]
@@ -98,7 +97,7 @@ class ReplayBuffer:
 
         sim=self.cos_sim(epi_rews1,epi_rews2)
 
-        # Choose one Batch
+        # Choose One Batch
         if sim>0.5:
             obs=obs1
             acts=acts1
@@ -108,10 +107,8 @@ class ReplayBuffer:
             epi_rews=epi_rews1
             return dict(obs=obs,acts=acts,rews=rews,next_obs=next_obs,done=done)
 
-        # Choose Largest k samples to compose batch
         else:
             idx=np.hstack([idx1,idx2])
-
             inter_epi_rews=self.epi_rew_buf[idx]
             inter_obs=self.obs_buf[idx]
             inter_next_obs=self.next_obs_buf[idx]
@@ -120,49 +117,59 @@ class ReplayBuffer:
             inter_rews=self.rews_buf[idx]
 
             arg_index=np.argsort(inter_epi_rews)
-            idx=np.where(arg_index>=self.batch_size+10)
-            idx=np.hstack([idx0,idx])
-            obs=inter_obs[idx]
-            acts=inter_acts[idx]
-            next_obs=inter_next_obs[idx]
-            rews=inter_rews[idx]
-            done=inter_done[idx]
-            epi_rews=inter_epi_rews[idx]
+            idx=np.where(arg_index>=self.batch_size+4)
+
+            obs1 = self.obs_buf[idx0]
+            acts1 = self.acts_buf[idx0]
+            rews1 = self.rews_buf[idx0]
+            next_obs1 = self.next_obs_buf[idx0]
+            done1 = self.done_buf[idx0]
+            epi_rews1 = self.epi_rew_buf[idx0]
+
+            obs2=inter_obs[idx]
+            acts2=inter_acts[idx]
+            rews2=inter_rews[idx]
+            next_obs2=inter_obs[idx]
+            done2=inter_done[idx]
+            epi_rews2=inter_epi_rews[idx]
+
+            obs=np.concatenate((obs1,obs2),axis=0)
+            next_obs=np.concatenate((next_obs1,next_obs2),axis=0)
+            acts=np.concatenate((acts1,acts2),axis=None)
+            rews=np.concatenate((rews1,rews2),axis=None)
+            done=np.concatenate((done1,done2),axis=None)
+
 
             return dict(obs=obs,acts=acts,rews=rews,next_obs=next_obs,done=done)
 
-
 class MuNet(nn.Module):
     def __init__(self):
-        super(MuNet,self).__init__()
-        self.fc1=nn.Linear(3,128)
-        self.fc2=nn.Linear(128,64)
-        self.fc3=nn.Linear(64,1)
+        super(MuNet, self).__init__()
+        self.fc1 = nn.Linear(3, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 1)
 
-
-    def forward(self,x):
-        x=F.relu(self.fc1(x))
-        x=F.relu(self.fc2(x))
-        mu=torch.tanh(self.fc3(x))*2
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        mu = torch.tanh(self.fc3(x)) * 2
 
         return mu
 
 class QNet(nn.Module):
 
-    def __init__(self,):
-        super(QNet,self).__init__()
-        self.fc_s=nn.Linear(3,64)
-        self.fc_a=nn.Linear(1,64)
-        self.fc_q=nn.Linear(128,32)
-        self.fc_out=nn.Linear(32,1)
+    def __init__(self, ):
+        super(QNet, self).__init__()
+        self.fc_s = nn.Linear(3, 64)
+        self.fc_a = nn.Linear(1, 64)
+        self.fc_q = nn.Linear(128, 32)
+        self.fc_out = nn.Linear(32, 1)
 
-
-    def forward(self,s,a):
-
-        h1=F.relu(self.fc_s(s))
-        h2=F.relu(self.fc_a(a))
-        cat=torch.cat([h1,h2],dim=1)
-        q=F.relu(self.fc_q(cat))
+    def forward(self, s, a):
+        h1 = F.relu(self.fc_s(s))
+        h2 = F.relu(self.fc_a(a))
+        cat = torch.cat([h1, h2], dim=1)
+        q = F.relu(self.fc_q(cat))
 
         return self.fc_out(q)
 
@@ -184,6 +191,7 @@ def seed_torch(seed):
     if torch.backends.cudnn.enabled:
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
+
 
 
 class DDPGAgent:
@@ -231,7 +239,6 @@ class DDPGAgent:
 
         return next_state,reward,done
 
-
     def update_model(self,lastest_transition:List):
 
         samples=self.memory.sample_batch(lastest_transition)
@@ -262,6 +269,7 @@ class DDPGAgent:
             param_target.data.copy_(param_target.data * (1. - tau) + tau * param.data)
 
 
+
     def train(self,num_frames:int) ->np.ndarray:
 
         self.is_test=False
@@ -271,7 +279,9 @@ class DDPGAgent:
         episode=list()
         result_score=0
 
+
         for frame_idx in range(num_frames):
+
             episode=list()
             score=0
             done=False
@@ -287,11 +297,11 @@ class DDPGAgent:
                 episode.append(transition)
 
 
+
             lastest_transition=episode[-1]
 
-
             if (frame_idx+1)%1==0:
-                reward_lst.append(result_score/1)
+                reward_lst.append(result_score)
                 result_score=0
 
             if len(self.memory)>=self.batch_size:
@@ -303,12 +313,10 @@ class DDPGAgent:
             for transition in episode:
                 transition.append(score)
                 self.memory.store(*transition)
+
             episode=list()
             score=0
-
-
 
         self.env.close()
         reward_lst=np.array(reward_lst,dtype=np.float32)
         return reward_lst
-    
