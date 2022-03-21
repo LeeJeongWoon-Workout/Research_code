@@ -245,7 +245,7 @@ class ResNet22W(nn.Module):
     """
     def __init__(self):
         super(ResNet22W, self).__init__()
-        self.features = ResNet(Bottleneck_BIG_CI, [1, 1], [True, False], [False, True], firstchannels=64, channels=[64, 128])
+        self.features = ResNet(Bottleneck_BIG_CI, [3, 1], [True, False], [False, True], firstchannels=64, channels=[64, 128])
         self.feature_size = 512
         self.dil=nn.Conv2d(self.feature_size,self.feature_size,kernel_size=2,dilation=3)
     def forward(self, x):

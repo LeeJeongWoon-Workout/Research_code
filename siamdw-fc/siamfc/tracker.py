@@ -258,17 +258,16 @@ class SiamFCTracker(Tracker):  #定义一个追踪器
             drop_last=True)  
 
         # loop over epochs 
-        for epoch in tqdm(range(config.epoch_num)):
+        for epoch in range(config.epoch_num):
             # update lr at each epoch
             self.lr_scheduler.step(epoch=epoch)
-
+            total_loss=0
             # loop over dataloader 
             for it, batch in enumerate(dataloader):
 
                 loss = self.train_step(batch, backward=True)
-                if it%100==0:
-                    print('Epoch: {} [{}/{}] Loss: {:.5f}'.format(epoch + 1, it + 1, len(dataloader), loss))
 
+                total_loss+=loss
                 sys.stdout.flush()
             
             # save checkpoint
@@ -276,11 +275,11 @@ class SiamFCTracker(Tracker):  #定义一个追踪器
 
                 os.makedirs(save_dir)
 
-            net_path = os.path.join(save_dir, 'siamfcres22_%d.pth' % (epoch + 1))
-
-
-            torch.save(self.net.state_dict(), net_path)
-
+            net_path1 = os.path.join(save_dir, 'siamfcres22_%d.pth' % (epoch + 1))
+            net_path2 = os.path.join(save_dir, 'siamfcres22_%d_backboneresnet.pth' % (epoch + 1))
+            torch.save(self.net.features.state_dict(),net_path2)
+            torch.save(self.net.state_dict(), net_path1)
+            print('Epoch: {} avg_Loss: {:.5f}'.format(epoch , total_loss/len(dataloader)))
     def _create_labels(self, size):
         # skip if same sized labels already created
         if hasattr(self, 'labels') and self.labels.size() == size:

@@ -1,5 +1,5 @@
 from __future__ import absolute_import, division, print_function
-
+from torchvision.models import resnet18
 import timm
 from timm.data.transforms_factory import create_transform
 import torch
@@ -17,7 +17,7 @@ class SiamFCNet(nn.Module):
         super(SiamFCNet, self).__init__()
         self.features = backbone
         self.head = head
-        self.attentionz=ViT(image_size=(10,10),patch_size=(2,2),in_channels=512,dim=512)
+        self.attentionz=ViT(image_size=(8,8),patch_size=(1,1),in_channels=512,dim=512)
 
 
 
@@ -27,9 +27,9 @@ class SiamFCNet(nn.Module):
 
         x=self.features(x)
         z=self.features(z)
+
+
         z=self.attentionz(z)
-
-
 
 
         return self.head(z, x)  
