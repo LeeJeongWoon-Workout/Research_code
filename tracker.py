@@ -30,6 +30,21 @@ from torch.nn.parallel import DistributedDataParallel
 import matplotlib.pyplot as plt
 __all__ = ['SiamFCTracker']
 
+            #Action: bounding box의 크기를 바꾸는 4개의 변위 값
+            #State: 잘려진 기준 사진의 feature map의 1X1 convolution 통고한 상태 + correlation map [그대로 flatten하도록 한]
+            #Reward: 수정한 Bounding Box와 Ground Truth의 IoU
+            #next_state: next_self_kernel의 feature map의 1X1 convolution 통과한 상 + correlation map
+            #mask : 1 (if IoU<0.5 and Video is finished) , IoU(IoU>0.5)
+
+            #init 함수에서 groundtruth를 기반으로한 (boundingbox) exemplar image태의 feature map인 self.kernel을 제작
+            #update시작 self.x_sz 만큼 자르고 config.instance_sz로 resize한 image의 feature map과 self.kernel correlation
+            #correlation map을 기반으로 action 4개를 도출한다.
+            #bounding box 갱신
+            #갱신된 bounding box를 기반으로 현재 instance image를 exemplar image로 만들고 이거 다음 self.kernel이 된다.
+            #Actor Critic Network 학습
+
+
+
 
 class SiamFCTracker(Tracker):  #定义一个追踪器
 
